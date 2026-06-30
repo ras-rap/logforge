@@ -46,13 +46,13 @@ export default function Home() {
             </p>
           </div>
 
-          <Card className="border-4 border-border shadow-[6px_6px_0_var(--border)] bg-card">
+          <Card className="border-4 border-border shadow-[0.375rem_0.375rem_0_var(--border)] bg-card">
             <CardContent className="p-5 space-y-4">
             <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Paste your crash log or latest.log here..."
-                className="min-h-[380px] w-full rounded-lg border-4 border-border bg-background p-4 font-mono text-sm shadow-[3px_3px_0_var(--border)] outline-none resize-y placeholder:text-muted-foreground focus:border-primary transition-colors"
+                className="min-h-[23.75rem] w-full rounded-lg border-4 border-border bg-background p-4 font-mono text-sm shadow-[0.1875rem_0.1875rem_0_var(--border)] outline-none resize-y placeholder:text-muted-foreground focus:border-primary transition-colors"
             />
 
               <div className="flex items-center gap-3">
@@ -61,7 +61,7 @@ export default function Home() {
                     variant="outline"
                     size="lg"
                     onClick={() => inputRef.current?.click()}
-                    className="border-4 border-border shadow-[3px_3px_0_var(--border)] font-bold hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_var(--border)] transition-all"
+                    className="border-4 border-border shadow-[0.1875rem_0.1875rem_0_var(--border)] font-bold hover:translate-x-px hover:translate-y-px hover:shadow-[0.125rem_0.125rem_0_var(--border)] transition-all"
                 >
                   <Upload className="size-4 mr-2" />
                   Upload file
@@ -71,7 +71,7 @@ export default function Home() {
                     size="lg"
                     disabled={!hasContent || loading}
                     onClick={submit}
-                    className="border-4 border-border bg-primary text-primary-foreground font-black shadow-[3px_3px_0_var(--border)] hover:bg-primary/90 hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_var(--border)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="border-4 border-border bg-primary text-primary-foreground font-black shadow-[0.1875rem_0.1875rem_0_var(--border)] hover:bg-primary/90 hover:translate-x-px hover:translate-y-px hover:shadow-[0.125rem_0.125rem_0_var(--border)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                       <>

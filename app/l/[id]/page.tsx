@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import LogViewer from "@/components/log-viewer";
-import AnalysisDrawer from "@/components/analysis-drawer";
+import LogViewContainer from "@/components/log-view-container";
 import { getLog } from "@/lib/db";
 
 export default async function LogPage({ params }: { params: Promise<{ id: string }> }) {
@@ -13,13 +12,12 @@ export default async function LogPage({ params }: { params: Promise<{ id: string
 
   return (
     <main className="h-dvh p-4 overflow-hidden">
-      <div className="relative h-full">
-        <div className="h-full">
-          <h1 className="text-3xl font-black mb-3">LogForge</h1>
-          <LogViewer text={log.content} />
-        </div>
-        {parsed && <AnalysisDrawer data={parsed} />}
-      </div>
+      <LogViewContainer 
+        id={id}
+        content={log.content} 
+        parsed={parsed} 
+        initialAiAnalysis={log.ai_analysis ? JSON.parse(log.ai_analysis) : null}
+      />
     </main>
   );
 }

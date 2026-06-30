@@ -19,9 +19,16 @@ db.exec(`
                                         filename TEXT NOT NULL,
                                         content TEXT NOT NULL,
                                         parsed TEXT,
+                                        ai_analysis TEXT,
                                         created_at INTEGER NOT NULL
     );
 `);
+
+try {
+    db.exec(`ALTER TABLE logs ADD COLUMN ai_analysis TEXT`);
+} catch (e) {
+    // Column already exists or other error
+}
 
 
 
@@ -30,6 +37,7 @@ export type StoredLog = {
     filename:string;
     content:string;
     parsed?:string;
+    ai_analysis?:string;
     created_at:number;
 };
 
@@ -72,4 +80,12 @@ export function getLog(
     WHERE id = ?
   `).get(id) as StoredLog | undefined;
 
+}
+
+export function updateLogAiAnalysis(id: string, aiAnalysis: string) {
+    db.prepare(`
+    UPDATE logs
+    SET ai_analysis = ?
+    WHERE id = ?
+  `).run(aiAnalysis, id);
 }

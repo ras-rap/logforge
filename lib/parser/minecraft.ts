@@ -431,6 +431,27 @@ function detectSuspectMods(
 
 
 
+        if(
+            (
+                important.includes("outdated") ||
+                important.includes("requires") ||
+                important.includes("dependency") ||
+                important.includes("newer version") ||
+                important.includes("incompatible")
+            )
+            &&
+            important.includes(id)
+        ){
+
+            score += 20;
+
+            reason =
+                "Version/Dependency mismatch";
+
+        }
+
+
+
         if(score > 0){
 
             suspects.set(
@@ -638,12 +659,22 @@ export function parseMinecraftLog(
             collectStackTrace(raw),
 
 
-        importantLines:
-            [
-                ...messages.errors,
-                ...messages.warnings
-            ]
-                .map(x=>x.line),
+        importantLines: [
+            ...messages.errors.map(x => x.line),
+            ...raw.split("\n").reduce((acc, line, i) => {
+                const lower = line.toLowerCase();
+                if (
+                    lower.includes("minecraft version:") || 
+                    lower.includes("java version:") ||
+                    lower.includes("loading mod") ||
+                    lower.includes("base mod") ||
+                    lower.includes("caused by:")
+                ) {
+                    acc.push(i + 1);
+                }
+                return acc;
+            }, [] as number[])
+        ].filter((v, i, a) => a.indexOf(v) === i),
 
 
         raw

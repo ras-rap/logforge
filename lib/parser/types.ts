@@ -56,3 +56,16 @@ export interface SuspectMod {
     reason:string;
     confidence:number;
 }
+
+export interface AiAnnotation {
+    line: number;
+    comment: string;
+}
+
+export interface AiAnalysis {
+    explanation: string;
+    steps: string[];
+    links: { title: string; url: string }[];
+    snippets: { file: string; content: string }[];
+    annotations: AiAnnotation[];
+}

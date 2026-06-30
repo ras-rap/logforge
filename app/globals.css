@@ -84,12 +84,12 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  --spacing-boxShadowX: 4px;
-  --spacing-boxShadowY: 4px;
-  --spacing-reverseBoxShadowX: -4px;
-  --spacing-reverseBoxShadowY: -4px;
-  --radius-base: 5px;
-  --shadow-shadow: 4px 4px 0px 0px var(--border);
+  --spacing-boxShadowX: 0.25rem;
+  --spacing-boxShadowY: 0.25rem;
+  --spacing-reverseBoxShadowX: -0.25rem;
+  --spacing-reverseBoxShadowY: -0.25rem;
+  --radius-base: 0.3125rem;
+  --shadow-shadow: 0.25rem 0.25rem 0px 0px var(--border);
   --font-weight-base: 500;
   --font-weight-heading: 700;
 }
@@ -101,5 +101,35 @@
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading;
+  }
+}
+
+@layer utilities {
+  .markdown-content {
+    @apply space-y-2;
+  }
+  .markdown-content p {
+    @apply leading-relaxed;
+  }
+  .markdown-content code {
+    @apply bg-black/20 px-1 py-0.5 rounded font-mono text-xs;
+  }
+  .markdown-content pre {
+    @apply bg-black/30 p-2 rounded-lg font-mono text-xs overflow-x-auto my-2;
+  }
+  .markdown-content pre code {
+    @apply bg-transparent p-0;
+  }
+  .markdown-content ul {
+    @apply list-disc list-inside space-y-1;
+  }
+  .markdown-content ol {
+    @apply list-decimal list-inside space-y-1;
+  }
+  .markdown-content strong {
+    @apply font-black;
+  }
+  .markdown-content a {
+    @apply text-primary underline hover:opacity-80;
   }
 }
