@@ -111,6 +111,22 @@
   .markdown-content p {
     @apply leading-relaxed;
   }
+  .markdown-content h1,
+  .markdown-content h2,
+  .markdown-content h3,
+  .markdown-content h4 {
+    @apply font-black mt-3 mb-1 first:mt-0;
+  }
+  .markdown-content h1 {
+    @apply text-base;
+  }
+  .markdown-content h2 {
+    @apply text-sm uppercase tracking-wide text-primary;
+  }
+  .markdown-content h3,
+  .markdown-content h4 {
+    @apply text-sm;
+  }
   .markdown-content code {
     @apply bg-black/20 px-1 py-0.5 rounded font-mono text-xs;
   }
@@ -126,10 +142,39 @@
   .markdown-content ol {
     @apply list-decimal list-inside space-y-1;
   }
+  .markdown-content li > ul,
+  .markdown-content li > ol {
+    @apply pl-4 mt-1;
+  }
   .markdown-content strong {
     @apply font-black;
   }
   .markdown-content a {
     @apply text-primary underline hover:opacity-80;
+  }
+  .markdown-content blockquote {
+    @apply border-l-2 border-primary/40 pl-3 italic text-muted-foreground my-2;
+  }
+  .markdown-content hr {
+    @apply border-border/50 my-3;
+  }
+
+  /* GFM tables: the side panel is narrow, so force a horizontal scroll
+     wrapper rather than letting cells crush/wrap into mush. */
+  .markdown-content table {
+    @apply w-full text-xs border-collapse my-2 block overflow-x-auto whitespace-nowrap;
+  }
+  .markdown-content thead {
+    @apply bg-black/20;
+  }
+  .markdown-content th,
+  .markdown-content td {
+    @apply border border-border/40 px-2 py-1 text-left align-top whitespace-normal;
+  }
+  .markdown-content th {
+    @apply font-black uppercase tracking-wide text-[0.625rem];
+  }
+  .markdown-content tr:nth-child(even) td {
+    @apply bg-black/10;
   }
 }

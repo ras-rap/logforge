@@ -1,684 +1,97 @@
-import {
-    Loader,
-    ParsedLog,
-    LogEntry, SuspectMod
-} from "./types";
+import { Loader, ParsedLog, Platform } from "./types";
+import { LoaderModule, detectVersion, detectJava, detectCauseGeneric, collectMessages, collectStackTrace, computeImportantLines } from "./loaders/base";
+import { paperModule } from "./loaders/paper";
+import { forgeModule } from "./loaders/forge";
+import { neoforgeModule } from "./loaders/neoforge";
+import { fabricModule } from "./loaders/fabric";
+import { quiltModule } from "./loaders/quilt";
 
+const genericModule: LoaderModule = {
+    detectCause: detectCauseGeneric,
+    detectMods: () => [],
+    detectSuspectMods: () => [],
+};
 
-function detectLoader(log:string):Loader {
-
+function detectLoader(log: string): Loader {
     const lower = log.toLowerCase();
 
+    // Checked in priority order — most specific markers first.
+    //
+    // NeoForge must come before Fabric: NeoForge ≥1.20.4 bundles sponge-mixin
+    // from the net.fabricmc org, so "net.fabricmc" appears in NeoForge logs.
+    // We tighten the Fabric match to "net.fabricmc.loader" (the Fabric Loader
+    // namespace) and "fabric loader" (its startup banner) so sponge-mixin alone
+    // doesn't trigger a false-positive.
+    if (lower.includes("neoforge")) return "neoforge";
+    if (lower.includes("quilt loader") || lower.includes("org.quiltmc") || lower.includes("quilt.mod.json")) return "quilt";
+    if (lower.includes("fabric loader") || lower.includes("net.fabricmc.loader")) return "fabric";
+    if (lower.includes("forge") || lower.includes("fml")) return "forge";
 
-    if(lower.includes("fabric loader"))
-        return "fabric";
-
-    if(lower.includes("neoforge"))
-        return "neoforge";
-
-    if(
-        lower.includes("forge") ||
-        lower.includes("fml")
-    )
-        return "forge";
-
-    if(lower.includes("quilt"))
-        return "quilt";
-
-    if(lower.includes("purpur"))
-        return "purpur";
-
-    if(lower.includes("paper"))
-        return "paper";
-
-    if(lower.includes("spigot"))
-        return "spigot";
-
+    // Bare "folia" false-positives on Paper servers with FoliaLib/FoliaScheduler plugins.
+    // Match Folia's actual startup markers instead.
+    if (
+        lower.includes("this server is running folia") ||
+        lower.includes("io.papermc.paper.threadedregions")
+    ) return "folia";
+    if (lower.includes("purpur")) return "purpur";
+    if (lower.includes("paper")) return "paper";
+    if (lower.includes("spigot")) return "spigot";
+    if (lower.includes("craftbukkit") || lower.includes("bukkit")) return "bukkit";
 
     return "unknown";
 }
 
+function getPlatform(loader: Loader): Platform {
+    if (["paper", "purpur", "folia", "spigot", "bukkit"].includes(loader)) return "plugin";
+    if (loader === "vanilla" || loader === "unknown") return "vanilla";
+    return "mod";
+}
 
-
-
-function detectVersion(
-    log:string
-){
-
-    const patterns = [
-
-        /Minecraft\s*Version[:\s]+([0-9.]+)/i,
-
-        /minecraft@([0-9.]+)/i,
-
-        /Minecraft\s+([0-9]+\.[0-9.]+)/i,
-
-        /mc_version[=: ]+([0-9.]+)/i
-
-    ];
-
-
-    for(const pattern of patterns){
-
-        const match =
-            log.match(pattern);
-
-
-        if(match)
-            return match[1];
-
+function getLoaderModule(loader: Loader): LoaderModule {
+    switch (loader) {
+        case "paper":
+        case "purpur":
+        case "folia":
+        case "spigot":
+        case "bukkit":
+            return paperModule;
+        case "fabric":
+            return fabricModule;
+        case "quilt":
+            return quiltModule;
+        case "forge":
+            return forgeModule;
+        case "neoforge":
+            return neoforgeModule;
+        default:
+            return genericModule;
     }
-
-
-    return undefined;
 }
 
-
-
-
-function detectJava(
-    log:string
-){
-
-    const match =
-        log.match(
-            /Java Version[:\s]+(.+)/i
-        );
-
-
-    return match?.[1]?.trim();
-
-}
-
-
-
-
-function detectCause(
-    log:string
-){
-
-    const lines =
-        log.split("\n");
-
-
-    let causedBy = "";
-
-
-
-    for(
-        let i=0;
-        i<lines.length;
-        i++
-    ){
-
-        const line =
-            lines[i];
-
-
-        if(
-            line.includes("Caused by:")
-        ){
-
-            causedBy =
-                line
-                    .replace(
-                        "Caused by:",
-                        ""
-                    )
-                    .trim();
-
-        }
-
-    }
-
-
-    if(causedBy)
-        return causedBy;
-
-
-
-    const exception =
-        log.match(
-            /([\w.$]+Exception)/
-        );
-
-
-    return exception?.[1];
-
-}
-
-
-
-
-function detectMods(
-    log:string
-){
-
-    const mods = new Set<string>();
-
-    const lines =
-        log.split("\n");
-
-
-    const blacklist = new Set([
-        "minecraft",
-        "forge",
-        "java",
-        "client",
-        "server",
-        "common",
-        "loader",
-        "mod",
-        "mods",
-        "version",
-        "environment",
-        "mixin",
-        "mixinextras",
-        "mixinsquared",
-        "connector",
-        "fabric"
-    ]);
-
-
-
-    for(const line of lines){
-
-        const clean =
-            line
-                .trim()
-                .replace(
-                    /^[-| ]+/,
-                    ""
-                );
-
-
-
-        /*
-          Mod list entries:
-
-          - hardcore_torches
-          |-- ferritecore
-        */
-
-        if(
-            /^[a-z0-9_ -]{3,50}$/i.test(clean)
-        ){
-
-            const id =
-                clean
-                    .split(" ")[0]
-                    .toLowerCase();
-
-
-
-            if(
-                !blacklist.has(id) &&
-                !id.includes(".")
-            ){
-
-                mods.add(id);
-
-            }
-
-        }
-
-
-
-        /*
-          jar files
-
-          farmersdelight-1.20.1.jar
-        */
-
-        const jar =
-            clean.match(
-                /^([a-z0-9_-]{3,50})-\d/i
-            );
-
-
-        if(jar){
-
-            const id =
-                jar[1]
-                    .toLowerCase();
-
-
-            if(
-                !blacklist.has(id)
-            ){
-
-                mods.add(id);
-
-            }
-
-        }
-
-
-        /*
-          modid=
-        */
-
-        const modid =
-            clean.match(
-                /modid[=: ]+([a-z0-9_-]+)/i
-            );
-
-
-        if(modid){
-
-            mods.add(
-                modid[1]
-                    .toLowerCase()
-            );
-
-        }
-
-    }
-
-
-
-    return [
-        ...mods
-    ];
-
-}
-
-
-
-
-function isBadModId(
-    id:string
-){
-
-    const blacklist = [
-
-        "minecraft",
-        "forge",
-        "java",
-        "client",
-        "server",
-
-        "mixin",
-        "mixinextras",
-        "mixinsquared",
-
-        "json",
-        "gson",
-
-        "connector",
-
-        "fmlearlywindow",
-        "modlauncher",
-
-        "net",
-        "com",
-
-        "org"
-
-    ];
-
-
-    return blacklist.includes(id);
-
-}
-
-function detectSuspectMods(
-    log:string,
-    mods:string[]
-){
-
-    const suspects = new Map<string, SuspectMod & { score:number }>();
-
-
-    const lower =
-        log.toLowerCase();
-
-
-    const ignored = new Set([
-        "client",
-        "server",
-        "common",
-        "forge",
-        "minecraft",
-        "java",
-        "connector",
-        "20",
-        "1",
-    ]);
-
-
-
-    const important =
-        log
-            .split("\n")
-            .slice(-150)
-            .join("\n")
-            .toLowerCase();
-
-
-
-    for(const mod of mods){
-
-        const id =
-            mod.toLowerCase();
-
-
-        if(
-            ignored.has(id)
-        ){
-            continue;
-        }
-
-
-
-        let score = 0;
-
-        let reason =
-            "";
-
-
-
-        if(
-            important.includes(id)
-        ){
-
-            score += 10;
-
-            reason =
-                "Referenced in crash";
-
-        }
-
-
-
-        if(
-            important.includes(
-                "mixin apply failed"
-            )
-            &&
-            important.includes(id)
-        ){
-
-            score += 15;
-
-            reason =
-                "Mixin compatibility issue";
-
-        }
-
-
-
-        if(
-            (
-                important.includes(
-                    "classnotfoundexception"
-                )
-                ||
-                important.includes(
-                    "noclassdeffounderror"
-                )
-            )
-            &&
-            important.includes(id)
-        ){
-
-            score += 15;
-
-            reason =
-                "Missing class reference";
-
-        }
-
-
-
-        if(
-            (
-                important.includes("outdated") ||
-                important.includes("requires") ||
-                important.includes("dependency") ||
-                important.includes("newer version") ||
-                important.includes("incompatible")
-            )
-            &&
-            important.includes(id)
-        ){
-
-            score += 20;
-
-            reason =
-                "Version/Dependency mismatch";
-
-        }
-
-
-
-        if(score > 0){
-
-            suspects.set(
-                id,
-                {
-                    name: mod,
-                    reason,
-                    score,
-                    confidence:
-                        Math.min(
-                            score * 10,
-                            100
-                        )
-                }
-            );
-
-        }
-
-    }
-
-
-
-
-    // known compatibility suspects
-    for(
-        const word of [
-        "hardcore_torches",
-        "farmersdelight"
-    ]
-        ){
-
-        if(
-            lower.includes(word)
-        ){
-
-            suspects.set(
-                word,
-                {
-                    name: word,
-                    reason:
-                        "Referenced in crash log",
-                    score:20,
-                    confidence:90
-                }
-            );
-
-        }
-
-    }
-
-
-
-
-    return [
-        ...suspects.values()
-    ]
-        .sort(
-            (a,b)=>
-                b.score-a.score
-        )
-        .slice(0,5)
-        .map(
-            x=>({
-                name:x.name,
-                reason:x.reason,
-                confidence:x.confidence
-            })
-        );
-
-}
-
-
-
-
-function collectMessages(
-    log:string
-){
-
-    const errors:LogEntry[]=[];
-    const warnings:LogEntry[]=[];
-
-
-    log.split("\n")
-        .forEach(
-            (line,index)=>{
-
-
-                const lower =
-                    line.toLowerCase();
-
-
-
-                if(
-                    lower.includes("error") ||
-                    lower.includes("exception") ||
-                    lower.includes("crash")
-                ){
-
-                    errors.push({
-                        level:"error",
-                        line:index+1,
-                        text:line
-                    });
-
-                }
-
-
-
-                if(
-                    lower.includes("warn")
-                ){
-
-                    warnings.push({
-                        level:"warn",
-                        line:index+1,
-                        text:line
-                    });
-
-                }
-
-            }
-        );
-
+export function parseMinecraftLog(raw: string): ParsedLog {
+    const loader = detectLoader(raw);
+    const platform = getPlatform(loader);
+    const mod = getLoaderModule(loader);
+
+    const messages = collectMessages(raw);
+    const mods = mod.detectMods(raw);
 
     return {
-        errors,
-        warnings
-    };
+        loader,
+        platform,
 
-}
-
-
-
-
-function collectStackTrace(
-    log:string
-){
-
-    return log
-        .split("\n")
-        .filter(
-            line =>
-                line.trim()
-                    .startsWith("at ")
-        )
-        .slice(0,50);
-
-}
-
-
-
-
-
-export function parseMinecraftLog(
-    raw:string
-):ParsedLog {
-
-
-    const messages =
-        collectMessages(raw);
-
-
-    const mods =
-        detectMods(raw);
-
-
-    return {
-
-        loader:
-            detectLoader(raw),
-
-
-
-        minecraftVersion:
-            detectVersion(raw),
-
-
-        javaVersion:
-            detectJava(raw),
-
-
-        crashCause:
-            detectCause(raw),
-
+        minecraftVersion: detectVersion(raw),
+        javaVersion: detectJava(raw),
+        crashCause: mod.detectCause(raw),
 
         mods,
+        suspectMods: mod.detectSuspectMods(raw, mods),
 
-        suspectMods:
-            detectSuspectMods(
-                raw,
-                mods
+        errors: messages.errors,
+        warnings: messages.warnings,
+        stackTrace: collectStackTrace(raw),
+        importantLines: computeImportantLines(raw, messages.errors),
 
-            ),
-
-
-        errors:
-        messages.errors,
-
-
-        warnings:
-        messages.warnings,
-
-
-        stackTrace:
-            collectStackTrace(raw),
-
-
-        importantLines: [
-            ...messages.errors.map(x => x.line),
-            ...raw.split("\n").reduce((acc, line, i) => {
-                const lower = line.toLowerCase();
-                if (
-                    lower.includes("minecraft version:") || 
-                    lower.includes("java version:") ||
-                    lower.includes("loading mod") ||
-                    lower.includes("base mod") ||
-                    lower.includes("caused by:")
-                ) {
-                    acc.push(i + 1);
-                }
-                return acc;
-            }, [] as number[])
-        ].filter((v, i, a) => a.indexOf(v) === i),
-
-
-        raw
-
+        raw,
     };
-
 }
